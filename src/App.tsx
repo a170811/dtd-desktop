@@ -1,51 +1,56 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { useChatStore } from './store/useChatStore'
+import { Sidebar } from './components/Sidebar'
+import { ChatWindow } from './components/ChatWindow'
+import { SettingsModal } from './components/SettingsModal'
+import { Session, Settings } from './types'
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+export default function App() {
+  const { setSessions, setSettings, settings, activeSessionId } = useChatStore()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  useEffect(() => {
+    const init = async () => {
+      const [sessions, loadedSettings] = await Promise.all([
+        invoke<Session[]>('load_sessions').catch(() => [] as Session[]),
+        invoke<Settings | null>('load_settings').catch(() => null),
+      ])
+      setSessions(sessions)
+      if (loadedSettings) {
+        setSettings(loadedSettings)
+      } else {
+        setSettingsOpen(true)
+      }
+    }
+    init()
+  }, [])
+
+  const handleSaveSettings = (newSettings: Settings) => {
+    setSettings(newSettings)
+    setSettingsOpen(false)
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
+      <Sidebar onOpenSettings={() => setSettingsOpen(true)} />
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      <main className="flex-1 flex flex-col min-w-0">
+        {activeSessionId ? (
+          <ChatWindow />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+            Select a session or create a new chat
+          </div>
+        )}
+      </main>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSave={handleSaveSettings}
+        initialValues={settings}
+      />
+    </div>
+  )
 }
-
-export default App;
