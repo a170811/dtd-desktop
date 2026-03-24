@@ -25,7 +25,8 @@ export async function streamChat(
     throw new Error(`LLM request failed: ${response.status} ${text}`)
   }
 
-  const reader = response.body!.getReader()
+  if (!response.body) throw new Error('LLM response has no body')
+  const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
 
