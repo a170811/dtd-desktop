@@ -2,7 +2,6 @@ import { it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar } from '../Sidebar'
 import { useChatStore } from '../../store/useChatStore'
-import { act } from '@testing-library/react'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn().mockResolvedValue(undefined) }))
 
