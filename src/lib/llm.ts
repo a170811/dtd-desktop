@@ -6,7 +6,7 @@ export async function streamChat(
   onChunk: (chunk: string) => void,
   signal: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(`${settings.baseUrl}/v1/chat/completions`, {
+  const response = await fetch(`${settings.baseUrl}/v1/responses`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -14,7 +14,7 @@ export async function streamChat(
     },
     body: JSON.stringify({
       model: settings.model,
-      messages: messages.map(({ role, content }) => ({ role, content })),
+      input: messages.map(({ role, content }) => ({ role, content })),
       stream: true,
     }),
     signal,
@@ -42,11 +42,13 @@ export async function streamChat(
       const trimmed = line.trim()
       if (!trimmed.startsWith('data:')) continue
       const data = trimmed.slice(5).trim()
-      if (data === '[DONE]') return
       try {
         const parsed = JSON.parse(data)
-        const content = parsed.choices?.[0]?.delta?.content
-        if (content) onChunk(content)
+        if (parsed.type === 'response.output_text.delta') {
+          if (parsed.delta) onChunk(parsed.delta)
+        } else if (parsed.type === 'response.done') {
+          return
+        }
       } catch {
         // skip malformed lines
       }

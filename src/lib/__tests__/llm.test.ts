@@ -11,9 +11,9 @@ const settings: Settings = {
 const makeStreamBody = (chunks: string[]) => {
   const encoder = new TextEncoder()
   const lines = chunks.map(
-    (c) => `data: ${JSON.stringify({ choices: [{ delta: { content: c } }] })}\n\n`
+    (c) => `data: ${JSON.stringify({ type: 'response.output_text.delta', delta: c })}\n\n`
   )
-  lines.push('data: [DONE]\n\n')
+  lines.push(`data: ${JSON.stringify({ type: 'response.done' })}\n\n`)
   return new ReadableStream({
     start(controller) {
       for (const line of lines) controller.enqueue(encoder.encode(line))
