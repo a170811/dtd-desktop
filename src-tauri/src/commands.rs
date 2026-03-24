@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Message {
     pub role: String,
     pub content: String,
@@ -12,6 +13,7 @@ pub struct Message {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Session {
     pub id: String,
     pub title: String,
@@ -20,6 +22,7 @@ pub struct Session {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub base_url: String,
     pub api_key: String,
