@@ -1,8 +1,10 @@
-import { it, expect, vi } from 'vitest'
+import { it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsModal } from '../SettingsModal'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn().mockResolvedValue(undefined) }))
+
+beforeEach(() => vi.clearAllMocks())
 
 const defaultProps = {
   isOpen: true,
