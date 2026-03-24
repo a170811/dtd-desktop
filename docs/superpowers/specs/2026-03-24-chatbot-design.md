@@ -147,13 +147,13 @@ interface ChatStore {
 2. User message appended to active session in store
 3. Empty assistant message (placeholder) added to store
 4. `useChat` hook calls `llm.ts` with full message history
-5. `fetch` POST to `{baseUrl}/chat/completions` with `stream: true`
+5. `fetch` POST to `{baseUrl}/v1/chat/completions` with `stream: true` (`baseUrl` must not include a path suffix)
 6. `ReadableStream` reader processes each SSE chunk
 7. Each chunk's `delta.content` is appended to the assistant message via `appendChunk`
 8. React re-renders on each chunk (Zustand selector minimises re-renders to `ChatWindow` only)
 9. On stream end: full session written to JSON file via Tauri command `save_session`
 
-**Abort flow:** An `AbortController` is created per request. The Stop button calls `controller.abort()`. Partial content is retained in the message.
+**Abort flow:** An `AbortController` is created per request. The Stop button calls `controller.abort()`. Partial content is retained in the in-memory store for the current session, but is **not written to JSON**. If the user closes the app after an abort, the partial message is lost. This is intentional.
 
 ---
 
@@ -202,8 +202,8 @@ All commands are `async` and return `Result<T, String>`.
 | Scenario | Behaviour |
 |----------|-----------|
 | Settings empty on launch | SettingsModal opens automatically |
-| LLM request fails (4xx/5xx) | Assistant message shows error text in red; not saved to JSON |
-| Network unreachable | Assistant message shows "Unable to connect to LLM server" |
+| LLM request fails (4xx/5xx) | Assistant message shows error text in red; visible in store for current session but not saved to JSON |
+| Network unreachable | Assistant message shows "Unable to connect to LLM server"; same store-only behaviour as above |
 | File read/write fails | Toast notification; app does not crash |
 | Stream aborted by user | Partial content retained; no error shown |
 
@@ -213,4 +213,5 @@ All commands are `async` and return `Result<T, String>`.
 
 - `npm run tauri build` produces a Windows NSIS installer (`.exe`) and/or an MSI
 - No external runtime required — Tauri bundles the WebView
-- App data stored in `%APPDATA%\<app-name>\` on Windows, `~/Library/Application Support/<app-name>/` on macOS
+- App name: **`dtd-desktop`** (set in `tauri.conf.json`)
+- App data stored in `%APPDATA%\dtd-desktop\` on Windows, `~/Library/Application Support/dtd-desktop/` on macOS
