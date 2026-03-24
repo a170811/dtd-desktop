@@ -27,10 +27,10 @@ beforeEach(() => {
 })
 
 it('calls onChunk for each content delta', async () => {
-  global.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
     body: makeStreamBody(['Hello', ' world']),
-  })
+  }))
 
   const chunks: string[] = []
   await streamChat(
@@ -44,11 +44,11 @@ it('calls onChunk for each content delta', async () => {
 })
 
 it('throws on non-ok response', async () => {
-  global.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: false,
     status: 401,
     text: async () => 'Unauthorized',
-  })
+  }))
 
   await expect(
     streamChat(
