@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom'
 
+// jsdom does not implement scrollIntoView; stub it globally
+window.HTMLElement.prototype.scrollIntoView = vi.fn()
+
 // Mock @tauri-apps/plugin-fs — all tests use this mock
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readTextFile: vi.fn(),
