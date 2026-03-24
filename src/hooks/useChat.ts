@@ -15,6 +15,8 @@ export function useChat() {
     const session = sessions.find((s) => s.id === activeSessionId)
     if (!session) return
 
+    if (store.isStreaming) return
+
     const userMessage: Message = {
       role: 'user',
       content,
