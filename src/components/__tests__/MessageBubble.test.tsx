@@ -11,10 +11,10 @@ it('renders user message right-aligned', () => {
 })
 
 it('renders assistant message with markdown bold', () => {
-  render(
+  const { container } = render(
     <MessageBubble message={{ role: 'assistant', content: '**Bold text**', timestamp: '' }} />
   )
-  expect(screen.getByRole('strong')).toBeInTheDocument()
+  expect(container.querySelector('strong')).toBeInTheDocument()
 })
 
 it('renders error message with red text class', () => {
