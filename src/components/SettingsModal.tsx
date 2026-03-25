@@ -13,12 +13,14 @@ export function SettingsModal({ isOpen, onClose, onSave, initialValues }: Props)
   const [baseUrl, setBaseUrl] = useState(initialValues?.baseUrl ?? '')
   const [apiKey, setApiKey] = useState(initialValues?.apiKey ?? '')
   const [model, setModel] = useState(initialValues?.model ?? '')
+  const [apiFormat, setApiFormat] = useState<'responses' | 'completions'>(initialValues?.apiFormat ?? 'completions')
 
   useEffect(() => {
     if (initialValues) {
       setBaseUrl(initialValues.baseUrl)
       setApiKey(initialValues.apiKey)
       setModel(initialValues.model)
+      setApiFormat(initialValues.apiFormat ?? 'completions')
     }
   }, [initialValues])
 
@@ -26,7 +28,7 @@ export function SettingsModal({ isOpen, onClose, onSave, initialValues }: Props)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const settings: Settings = { baseUrl, apiKey, model }
+    const settings: Settings = { baseUrl, apiKey, model, apiFormat }
     await invoke('save_settings', { settings })
     onSave(settings)
   }
@@ -71,6 +73,17 @@ export function SettingsModal({ isOpen, onClose, onSave, initialValues }: Props)
               placeholder="gpt-4o"
               required
             />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">API Format</label>
+            <select
+              value={apiFormat}
+              onChange={(e) => setApiFormat(e.target.value as 'responses' | 'completions')}
+              className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm border border-gray-700 focus:outline-none focus:border-blue-500"
+            >
+              <option value="completions">Chat Completions (/v1/chat/completions)</option>
+              <option value="responses">Responses (/v1/responses)</option>
+            </select>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button

@@ -16,4 +16,5 @@ export interface Settings {
   baseUrl: string
   apiKey: string
   model: string
+  apiFormat?: 'responses' | 'completions'
 }
