@@ -51,3 +51,54 @@ describe('appendChunk', () => {
     expect(msg.content).toBe('Hello world')
   })
 })
+
+describe('createSessionWithDir', () => {
+  it('creates a session with a working directory', () => {
+    const { result } = renderHook(() => useChatStore())
+    act(() => result.current.createSessionWithDir('/home/user/project'))
+    expect(result.current.sessions).toHaveLength(1)
+    expect(result.current.sessions[0].workingDirectory).toBe('/home/user/project')
+    expect(result.current.sessions[0].allowedTools).toEqual([])
+    expect(result.current.activeSessionId).toBe(result.current.sessions[0].id)
+  })
+})
+
+describe('addAllowedTool', () => {
+  it('adds a tool name to the session allowedTools', () => {
+    const { result } = renderHook(() => useChatStore())
+    act(() => result.current.createSessionWithDir('/tmp'))
+    const id = result.current.sessions[0].id
+    act(() => result.current.addAllowedTool(id, 'read_file'))
+    expect(result.current.sessions[0].allowedTools).toContain('read_file')
+  })
+
+  it('does not duplicate tool names', () => {
+    const { result } = renderHook(() => useChatStore())
+    act(() => result.current.createSessionWithDir('/tmp'))
+    const id = result.current.sessions[0].id
+    act(() => result.current.addAllowedTool(id, 'read_file'))
+    act(() => result.current.addAllowedTool(id, 'read_file'))
+    expect(result.current.sessions[0].allowedTools!.filter((t) => t === 'read_file')).toHaveLength(1)
+  })
+})
+
+describe('updateSession', () => {
+  it('updates session fields', () => {
+    const { result } = renderHook(() => useChatStore())
+    act(() => result.current.createSessionWithDir('/tmp'))
+    const id = result.current.sessions[0].id
+    act(() => result.current.updateSession(id, { title: 'Updated' }))
+    expect(result.current.sessions[0].title).toBe('Updated')
+  })
+})
+
+describe('pendingToolCall', () => {
+  it('sets and clears pending tool call', () => {
+    const { result } = renderHook(() => useChatStore())
+    const tc = { id: 'call_1', name: 'bash', arguments: { command: 'ls' } }
+    act(() => result.current.setPendingToolCall(tc))
+    expect(result.current.pendingToolCall).toEqual(tc)
+    act(() => result.current.setPendingToolCall(null))
+    expect(result.current.pendingToolCall).toBeNull()
+  })
+})

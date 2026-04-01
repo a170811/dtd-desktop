@@ -1,14 +1,16 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import { Session, Message, Settings } from '../types'
+import { Session, Message, Settings, ToolCall } from '../types'
 
 interface ChatStore {
   sessions: Session[]
   activeSessionId: string | null
   settings: Settings | null
   isStreaming: boolean
+  pendingToolCall: ToolCall | null
 
   createSession: () => void
+  createSessionWithDir: (workingDirectory: string) => void
   deleteSession: (id: string) => void
   setActiveSession: (id: string) => void
   addMessage: (sessionId: string, message: Message) => void
@@ -16,6 +18,9 @@ interface ChatStore {
   setStreaming: (value: boolean) => void
   setSessions: (sessions: Session[]) => void
   setSettings: (settings: Settings) => void
+  addAllowedTool: (sessionId: string, toolName: string) => void
+  updateSession: (sessionId: string, updates: Partial<Session>) => void
+  setPendingToolCall: (toolCall: ToolCall | null) => void
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -23,6 +28,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   activeSessionId: null,
   settings: null,
   isStreaming: false,
+  pendingToolCall: null,
 
   createSession: () => {
     const session: Session = {
@@ -78,6 +84,42 @@ export const useChatStore = create<ChatStore>((set) => ({
       }),
     }))
   },
+
+  createSessionWithDir: (workingDirectory) => {
+    const session: Session = {
+      id: uuidv4(),
+      title: 'New Chat',
+      createdAt: new Date().toISOString(),
+      messages: [],
+      workingDirectory,
+      allowedTools: [],
+    }
+    set((state) => ({
+      sessions: [...state.sessions, session],
+      activeSessionId: session.id,
+    }))
+  },
+
+  addAllowedTool: (sessionId, toolName) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) => {
+        if (s.id !== sessionId) return s
+        const existing = s.allowedTools ?? []
+        if (existing.includes(toolName)) return s
+        return { ...s, allowedTools: [...existing, toolName] }
+      }),
+    }))
+  },
+
+  updateSession: (sessionId, updates) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId ? { ...s, ...updates } : s
+      ),
+    }))
+  },
+
+  setPendingToolCall: (toolCall) => set({ pendingToolCall: toolCall }),
 
   setStreaming: (value) => set({ isStreaming: value }),
   setSessions: (sessions) => set({ sessions }),
