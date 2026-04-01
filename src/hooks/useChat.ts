@@ -118,7 +118,23 @@ export function useChat() {
             }),
           }))
 
-          const workingDir = currentSession.workingDirectory ?? ''
+          const workingDir = currentSession.workingDirectory
+          if (!workingDir) {
+            // Legacy sessions without a working directory can't execute tools
+            for (const toolCall of collectedToolCalls) {
+              const toolResultMessage: Message = {
+                role: 'tool',
+                content: `Error: No working directory set for this session. Create a new session to use tools.`,
+                timestamp: new Date().toISOString(),
+                toolCallId: toolCall.id,
+              }
+              store.addMessage(activeSessionId, toolResultMessage)
+            }
+            const nextPlaceholder: Message = { role: 'assistant', content: '', timestamp: new Date().toISOString() }
+            store.addMessage(activeSessionId, nextPlaceholder)
+            continueLoop = true
+            continue
+          }
 
           for (const toolCall of collectedToolCalls) {
             const latestSession = useChatStore.getState().sessions.find((s) => s.id === activeSessionId)!
@@ -208,6 +224,8 @@ export function useChat() {
   const stopStreaming = () => {
     abortRef.current?.abort()
     if (toolCallResolverRef.current) {
+      // Resolve with 'deny' so the pending promise settles and sendMessage can reach its finally block
+      toolCallResolverRef.current.resolve({ action: 'deny' })
       toolCallResolverRef.current = null
       useChatStore.getState().setPendingToolCall(null)
     }

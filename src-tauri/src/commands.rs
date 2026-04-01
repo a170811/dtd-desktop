@@ -195,18 +195,37 @@ fn execute_bash_sync(command: &str, working_dir: &str) -> Result<String, String>
         }
     }
 
-    let output = if cfg!(target_os = "windows") {
+    use wait_timeout::ChildExt;
+
+    let mut child = if cfg!(target_os = "windows") {
         std::process::Command::new("cmd")
             .args(["/C", command])
             .current_dir(working_dir)
-            .output()
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
     } else {
         std::process::Command::new("sh")
             .args(["-c", command])
             .current_dir(working_dir)
-            .output()
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
     }
     .map_err(|e| format!("Failed to execute command: {}", e))?;
+
+    let timeout = std::time::Duration::from_secs(120);
+    match child.wait_timeout(timeout).map_err(|e| format!("Failed to wait for command: {}", e))? {
+        Some(_status) => {}
+        None => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err("Error: Command timed out after 120 seconds".to_string());
+        }
+    }
+
+    let output = child.wait_with_output()
+        .map_err(|e| format!("Failed to read command output: {}", e))?;
 
     let mut combined = String::new();
     combined.push_str(&String::from_utf8_lossy(&output.stdout));
