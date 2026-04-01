@@ -18,6 +18,10 @@ pub fn run() {
             commands::delete_session,
             commands::load_settings,
             commands::save_settings,
+            commands::execute_bash,
+            commands::execute_read_file,
+            commands::execute_write_file,
+            commands::execute_edit_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
