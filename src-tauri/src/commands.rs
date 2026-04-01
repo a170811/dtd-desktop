@@ -186,6 +186,36 @@ fn validate_path(path: &str, working_dir: &str) -> Result<PathBuf, String> {
 
 const MAX_OUTPUT_BYTES: usize = 50 * 1024; // 50 KB
 
+/// Decode command output bytes to a UTF-8 string.
+/// On Windows, cmd.exe output uses the system OEM codepage (e.g. CP950 for
+/// Traditional Chinese, CP936 for Simplified Chinese). We detect the active
+/// codepage and decode accordingly so CJK characters are preserved.
+fn decode_output(bytes: &[u8]) -> String {
+    // Fast path: valid UTF-8 (covers macOS/Linux and chcp 65001 on Windows)
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return s.to_string();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let codepage = unsafe { winapi::um::winnls::GetOEMCP() };
+        let encoding = match codepage {
+            950 => encoding_rs::BIG5,
+            936 | 54936 => encoding_rs::GBK,
+            932 => encoding_rs::SHIFT_JIS,
+            949 => encoding_rs::EUC_KR,
+            _ => encoding_rs::UTF_8,
+        };
+        let (decoded, _, _) = encoding.decode(bytes);
+        decoded.into_owned()
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        String::from_utf8_lossy(bytes).into_owned()
+    }
+}
+
 fn execute_bash_sync(command: &str, working_dir: &str) -> Result<String, String> {
     // Block dangerous commands
     let dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"];
@@ -198,8 +228,10 @@ fn execute_bash_sync(command: &str, working_dir: &str) -> Result<String, String>
     use wait_timeout::ChildExt;
 
     let mut child = if cfg!(target_os = "windows") {
+        // Prefix with "chcp 65001" to switch cmd.exe to UTF-8 output
+        let wrapped = format!("chcp 65001 >nul && {}", command);
         std::process::Command::new("cmd")
-            .args(["/C", command])
+            .args(["/C", &wrapped])
             .current_dir(working_dir)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -228,8 +260,8 @@ fn execute_bash_sync(command: &str, working_dir: &str) -> Result<String, String>
         .map_err(|e| format!("Failed to read command output: {}", e))?;
 
     let mut combined = String::new();
-    combined.push_str(&String::from_utf8_lossy(&output.stdout));
-    combined.push_str(&String::from_utf8_lossy(&output.stderr));
+    combined.push_str(&decode_output(&output.stdout));
+    combined.push_str(&decode_output(&output.stderr));
 
     if combined.is_empty() {
         return Ok("(no output)".to_string());
