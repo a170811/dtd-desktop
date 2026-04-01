@@ -1,9 +1,13 @@
 import { it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { Sidebar } from '../Sidebar'
 import { useChatStore } from '../../store/useChatStore'
+import { open } from '@tauri-apps/plugin-dialog'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: vi.fn().mockResolvedValue('/mock/dir'),
+}))
 
 beforeEach(() => {
   useChatStore.setState({ sessions: [], activeSessionId: null, settings: null, isStreaming: false })
@@ -14,10 +18,14 @@ it('renders New Chat button', () => {
   expect(screen.getByRole('button', { name: /new chat/i })).toBeInTheDocument()
 })
 
-it('creates a new session on New Chat click', () => {
+it('creates a new session with directory on New Chat click', async () => {
   render(<Sidebar onOpenSettings={vi.fn()} />)
-  fireEvent.click(screen.getByRole('button', { name: /\+ new chat/i }))
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /\+ new chat/i }))
+  })
+  expect(open).toHaveBeenCalledWith({ directory: true, title: 'Select working directory' })
   expect(useChatStore.getState().sessions).toHaveLength(1)
+  expect(useChatStore.getState().sessions[0].workingDirectory).toBe('/mock/dir')
 })
 
 it('calls onOpenSettings when settings button clicked', () => {

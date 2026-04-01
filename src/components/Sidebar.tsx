@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { useChatStore } from '../store/useChatStore'
 
 interface Props {
@@ -6,7 +7,14 @@ interface Props {
 }
 
 export function Sidebar({ onOpenSettings }: Props) {
-  const { sessions, activeSessionId, createSession, deleteSession, setActiveSession } = useChatStore()
+  const { sessions, activeSessionId, createSessionWithDir, deleteSession, setActiveSession } = useChatStore()
+
+  const handleNewChat = async () => {
+    const selected = await open({ directory: true, title: 'Select working directory' })
+    if (selected) {
+      createSessionWithDir(selected as string)
+    }
+  }
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -18,7 +26,7 @@ export function Sidebar({ onOpenSettings }: Props) {
     <div className="w-60 flex flex-col h-full bg-gray-900 border-r border-gray-700">
       <div className="p-3">
         <button
-          onClick={createSession}
+          onClick={handleNewChat}
           className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
           + New Chat
