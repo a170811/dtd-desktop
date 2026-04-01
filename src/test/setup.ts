@@ -13,6 +13,11 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   mkdir: vi.fn(),
 }))
 
+// Mock @tauri-apps/plugin-dialog
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: vi.fn(),
+}))
+
 // Mock @tauri-apps/api/path
 vi.mock('@tauri-apps/api/path', () => ({
   appDataDir: vi.fn().mockResolvedValue('/mock/appdata'),
