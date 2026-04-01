@@ -5,11 +5,11 @@ import { useChatStore } from '../../store/useChatStore'
 import { act } from '@testing-library/react'
 
 vi.mock('../../hooks/useChat', () => ({
-  useChat: () => ({ sendMessage: vi.fn(), stopStreaming: vi.fn() }),
+  useChat: () => ({ sendMessage: vi.fn(), stopStreaming: vi.fn(), respondToToolCall: vi.fn() }),
 }))
 
 beforeEach(() => {
-  useChatStore.setState({ sessions: [], activeSessionId: null, settings: null, isStreaming: false })
+  useChatStore.setState({ sessions: [], activeSessionId: null, settings: null, isStreaming: false, pendingToolCall: null })
   act(() => useChatStore.getState().createSession())
 })
 
