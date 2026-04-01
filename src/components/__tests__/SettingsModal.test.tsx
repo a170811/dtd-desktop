@@ -30,6 +30,7 @@ it('calls onSave with form values on submit', async () => {
       baseUrl: 'http://localhost:4000',
       apiKey: 'sk-abc',
       model: 'gpt-4o',
+      apiFormat: 'completions',
     })
   )
 })
