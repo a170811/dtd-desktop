@@ -75,6 +75,7 @@ async function setupNode() {
   const npmCmd = join(NODE_DIR, process.platform === 'win32' ? 'npm.cmd' : 'bin/npm');
   execFileSync(npmCmd, ['install', '--prefix', NODE_DIR, 'docx', 'pptxgenjs', 'pdf-lib'], {
     stdio: 'inherit',
+    shell: process.platform === 'win32',
     env: { ...process.env, PATH: `${NODE_DIR}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH}` },
   });
 
