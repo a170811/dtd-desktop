@@ -26,6 +26,9 @@ npm run tauri build
 
 # Rust tests only
 cd src-tauri && cargo test
+
+# Download Node.js + Python runtimes for bundling (Windows build only)
+npm run setup-runtime
 ```
 
 ## Architecture
@@ -57,6 +60,12 @@ Five Tauri commands, all `async`, returning `Result<T, String>`:
 | `delete_session` | Delete `appDataDir/sessions/<id>.json` |
 | `load_settings` | Read `appDataDir/settings.json`, returns `null` if absent |
 | `save_settings` | Write `appDataDir/settings.json` |
+
+### Bundled runtimes
+
+Node.js 22 LTS portable and Python 3.13 embeddable are bundled as Tauri resources (Windows only). `scripts/setup-runtime.mjs` downloads and prepares them at build time into `src-tauri/resources/`. At runtime, `execute_bash()` injects `PATH`, `NODE_PATH`, and `PYTHONPATH` environment variables pointing to the bundled runtimes via `src-tauri/src/runtime.rs`.
+
+Pre-installed packages: Node.js (`docx`, `pptxgenjs`, `pdf-lib`), Python (`pypdf`, `pdfplumber`, `reportlab`, `openpyxl`, `pandas`, `markitdown[pptx]`, `Pillow`, `pdf2image`).
 
 ### Data persistence
 

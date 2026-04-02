@@ -216,7 +216,7 @@ fn decode_output(bytes: &[u8]) -> String {
     }
 }
 
-fn execute_bash_sync(command: &str, working_dir: &str) -> Result<String, String> {
+fn execute_bash_sync(command: &str, working_dir: &str, resource_dir: Option<&std::path::Path>) -> Result<String, String> {
     // Block dangerous commands
     let dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"];
     for pattern in &dangerous {
@@ -227,22 +227,34 @@ fn execute_bash_sync(command: &str, working_dir: &str) -> Result<String, String>
 
     use wait_timeout::ChildExt;
 
+    let runtime_env = resource_dir.map(|dir| {
+        let env = crate::runtime::build_runtime_env(dir);
+        let system_path = std::env::var("PATH").unwrap_or_default();
+        crate::runtime::merge_with_system_path(&env, &system_path)
+    });
+
     let mut child = if cfg!(target_os = "windows") {
         // Prefix with "chcp 65001" to switch cmd.exe to UTF-8 output
         let wrapped = format!("chcp 65001 >nul && {}", command);
-        std::process::Command::new("cmd")
-            .args(["/C", &wrapped])
+        let mut cmd = std::process::Command::new("cmd");
+        cmd.args(["/C", &wrapped])
             .current_dir(working_dir)
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
+            .stderr(std::process::Stdio::piped());
+        if let Some(ref env) = runtime_env {
+            cmd.envs(env);
+        }
+        cmd.spawn()
     } else {
-        std::process::Command::new("sh")
-            .args(["-c", command])
+        let mut cmd = std::process::Command::new("sh");
+        cmd.args(["-c", command])
             .current_dir(working_dir)
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
+            .stderr(std::process::Stdio::piped());
+        if let Some(ref env) = runtime_env {
+            cmd.envs(env);
+        }
+        cmd.spawn()
     }
     .map_err(|e| format!("Failed to execute command: {}", e))?;
 
@@ -335,8 +347,9 @@ fn execute_edit_file_sync(path: &str, working_dir: &str, old_text: &str, new_tex
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub async fn execute_bash(command: String, working_dir: String) -> Result<String, String> {
-    execute_bash_sync(&command, &working_dir)
+pub async fn execute_bash(app: AppHandle, command: String, working_dir: String) -> Result<String, String> {
+    let resource_dir = app.path().resource_dir().ok();
+    execute_bash_sync(&command, &working_dir, resource_dir.as_deref())
 }
 
 #[tauri::command]
@@ -518,6 +531,22 @@ mod tests {
         );
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("old_text not found"));
+
+        std::fs::remove_dir_all(&workdir).ok();
+    }
+
+    #[test]
+    fn test_execute_bash_with_runtime_env() {
+        let workdir = std::env::temp_dir().join("test_bash_runtime");
+        std::fs::create_dir_all(&workdir).unwrap();
+
+        let resource_dir = workdir.join("resources");
+        std::fs::create_dir_all(resource_dir.join("node")).unwrap();
+        std::fs::create_dir_all(resource_dir.join("python").join("Lib").join("site-packages")).unwrap();
+
+        let result = execute_bash_sync("echo hello", workdir.to_str().unwrap(), Some(&resource_dir));
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("hello"));
 
         std::fs::remove_dir_all(&workdir).ok();
     }

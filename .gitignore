@@ -26,3 +26,6 @@ dist-ssr
 # Worktrees and superpowers
 .worktrees/
 .superpowers/
+
+# Bundled runtimes (downloaded at build time)
+src-tauri/resources/
